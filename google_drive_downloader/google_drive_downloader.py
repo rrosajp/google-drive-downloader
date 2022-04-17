@@ -50,13 +50,12 @@ class GoogleDriveDownloader:
 
             session = requests.Session()
 
-            print('Downloading {} into {}... '.format(file_id, dest_path), end='')
+            print(f'Downloading {file_id} into {dest_path}... ', end='')
             stdout.flush()
 
             response = session.get(GoogleDriveDownloader.DOWNLOAD_URL, params={'id': file_id}, stream=True)
 
-            token = GoogleDriveDownloader._get_confirm_token(response)
-            if token:
+            if token := GoogleDriveDownloader._get_confirm_token(response):
                 params = {'id': file_id, 'confirm': token}
                 response = session.get(GoogleDriveDownloader.DOWNLOAD_URL, params=params, stream=True)
 
@@ -75,14 +74,20 @@ class GoogleDriveDownloader:
                         z.extractall(destination_directory)
                     print('Done.')
                 except zipfile.BadZipfile:
-                    warnings.warn('Ignoring `unzip` since "{}" does not look like a valid zip file'.format(file_id))
+                    warnings.warn(
+                        f'Ignoring `unzip` since "{file_id}" does not look like a valid zip file'
+                    )
 
     @staticmethod
     def _get_confirm_token(response):
-        for key, value in response.cookies.items():
-            if key.startswith('download_warning'):
-                return value
-        return None
+        return next(
+            (
+                value
+                for key, value in response.cookies.items()
+                if key.startswith('download_warning')
+            ),
+            None,
+        )
 
     @staticmethod
     def _save_response_content(response, destination, showsize, current_size):
